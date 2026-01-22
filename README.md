@@ -72,12 +72,12 @@ Outcome: The control loop and communication work correctly. Tracking accuracy de
 
 The observed tracking error is a realistic control issue that reflects the physics-based simulation and controller tuning, not a failure of the communication or command interface.
 
-### Phase 4: Custom Jacobian-Based End-Effector Controller (Own Controller)
+### Phase 4: Custom Jacobian-Based End-Effector Controller (own controller)
 
 File: `phase4_jacobian_controller.py`
 
 Description:  
-Phase 4 implements a fully custom kinematic controller written in Python, where joint updates are computed explicitly rather than relying on CoppeliaSim's internal inverse kinematics or motion planning.
+Phase 4 implements a fully custom kinematic controller written in python where joint updates are computed explicitly rather than relying on CoppeliaSim's internal inverse kinematics or motion planning.
 
 The controller operates in Cartesian (task) space and uses the robot's Jacobian to map small desired end-effector motions to joint-space updates. A numerical Jacobian is computed online using finite differences, and joint updates are calculated using a damped least-squares formulation to improve numerical stability near singular configurations.
 
@@ -92,9 +92,11 @@ Design rationale:
 The default Franka Panda model includes internal Lua control scripts that may override joint target commands. To ensure full ownership of the control logic, these scripts were disabled and all control computations were implemented externally in Python.
 
 Outcome:
-The controller successfully executes stable Cartesian trajectories over a fixed simulation-time duration (~8 seconds), with bounded joint updates and smooth end-effector motion.
+The controller successfully executes stable Cartesian trajectories over a fixed simulation-time duration (around 8 seconds) with bounded joint updates and smooth end-effector motion.
 
-## Observations and learning outcomes (documentation updates last 18/01)
+![phase4](images/phase4.png)
+
+## Observations and learning outcomes (documentation updates last 18/01/2025)
 
 - Joint Control Modes (Phases 2–3): The behavior of `setJointTargetPosition()` depends on the joint's control mode. Position control with appropriate PID tuning yields better tracking than velocity or torque control when using CoppeliaSim's internal joint controllers.
 
@@ -118,7 +120,7 @@ The controller successfully executes stable Cartesian trajectories over a fixed 
 
 - Multi-Joint Control: Extend the control loop to command multiple joints simultaneously, potentially using inverse kinematics to compute joint targets from end-effector poses.
 
-- Trajectory Generation: Implement more sophisticated trajectory generation (e.g., cubic splines, minimum-jerk trajectories) and compare tracking performance.
+- Trajectory Generation: Implement more sophisticated trajectory generation such as cubic splines, minimum-jerk trajectories and compare tracking performance.
 
 - Real-Time Performance: Analyse the relationship between control loop frequency, communication latency, and tracking accuracy.
 
