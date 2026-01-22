@@ -98,15 +98,15 @@ The controller successfully executes stable Cartesian trajectories over a fixed 
 
 ## Observations and learning outcomes (documentation updates last 18/01/2025)
 
-- Joint Control Modes (Phases 2–3): The behavior of `setJointTargetPosition()` depends on the joint's control mode. Position control with appropriate PID tuning yields better tracking than velocity or torque control when using CoppeliaSim's internal joint controllers.
+- Joint Control Modes (Phases 2 to 3): The behaviour of `setJointTargetPosition()` depends on the joint's control mode. Position control with appropriate PID tuning yields better tracking than velocity or torque control when using CoppeliaSim's internal joint controllers.
 
-- PID Tuning (Phases 2–3): Tracking performance is sensitive to proportional, integral, and derivative gains when using built-in joint controllers. In Phase 4, PID control is bypassed in favour of direct kinematic joint updates.
+- PID Tuning (Phases 2 to 3): Tracking performance is sensitive to proportional, integral and derivative gains when using built-in joint controllers. In Phase 4, PID control is bypassed in favour of direct kinematic joint updates.
 
 - Kinematic Control (Phase 4): In the custom Jacobian-based controller, joint motor control modes and PID gains are bypassed entirely. Joint updates are computed explicitly in Python using a numerical Jacobian and damped least-squares formulation and applied directly via `sim.setJointPosition()`.
 
 - Control Loop Frequency: Running the control loop at 20 Hz provides reasonable performance for this application, but higher frequencies may improve tracking for faster trajectories.
 
-- Simulation Time vs Wall-Clock Time: Using simulation time for timing ensures consistent behavior regardless of real-time performance, which is important for reproducible experiments.
+- Using simulation time for timing ensures consistent behavior regardless of real-time performance which is important for reproducible experiments.
 
 - Command-Level vs Model-Level Control: This project operates at the command level (setting target positions). Model-level controllers such as inverse kinematics and trajectory planners would be implemented at a higher level and would use these command-level primitives.
 
