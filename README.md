@@ -2,7 +2,7 @@
 
 This repository presents a set of incremental experiments implementing a custom joint-space kinematic controller for a Franka Emika Panda robot in CoppeliaSim, using the ZMQ Remote API and Python.
 
-The personal project aims to control joint movements from outside the simulator, watch how the robot moves in a physics-based simulation, and study how well the controller tracks the desired paths and where it falls short. Instead of using built-in motion planners or inverse kinematics solvers, all control logic is written in Python and runs outside the simulator.
+The personal project aims to control joint movements from outside the simulator, watch how the robot moves in a physics based simulation, and study how well the controller tracks the desired paths and where it falls short. Instead of using built-in motion planners or inverse kinematics solvers, all control logic is written in Python and runs outside the simulator. This project culminates in the implementation of a custom Jacobian-based controller written externally in Python.
 
 ## Overview
 
@@ -16,17 +16,17 @@ This project focuses on learning robot joint control via Python, specifically:
 
 ## Project Structure
 
-The project consists of three phase scripts, each building on the previous:
+The project consists of four phase scripts, each building on the previous:
 
 - phase1_connect.py: Establishes ZMQ connection and verifies basic simulator communication
 - phase2_move_joint.py: Commands a single joint to move by a fixed offset and verifies motion
 - phase3_sine_joint.py: Implements continuous sine-wave joint control with tracking error analysis
+- phase4_jacobian_controller.py: Custom Jacobian-based end-effector controller (own controller)
 
 All scripts include automatic detection of the CoppeliaSim ZMQ Remote API client library on macOS, with fallback support for both the new (`coppeliasim_zmqremoteapi_client`) and deprecated (`zmqRemoteApi`) import names.
 
-## Phases breakdown
 
-### Phase 1 – Simulator connection
+### Phase 1: Simulator connection
 
 File: `phase1_connect.py`
 
@@ -38,7 +38,9 @@ Establishes ZMQ connection to CoppeliaSim running on `localhost:23000`. The scri
 
 Outcome: Confirms that Python can communicate with CoppeliaSim and that simulation control commands are accepted.
 
-### Phase 2 – Single Joint Position Control
+![phase1](images/phase1.png)
+
+### Phase 2: Single Joint Position Control
 
 File: `phase2_move_joint.py`
 
@@ -51,7 +53,7 @@ Commands `panda_joint1` to move by a fixed offset and verifies the motion. The s
 
 Outcome: Verifies that joint handle lookup works correctly, target position commands are accepted, and basic joint actuation occurs. The script reports whether the joint reached the commanded target within a tolerance, which depends on the joint's control mode and dynamics.
 
-### Phase 3 – Continuous sine wave joint control
+### Phase 3: Continuous sine wave joint control
 
 File: `phase3_sine_joint.py`
 
@@ -70,11 +72,35 @@ Outcome: The control loop and communication work correctly. Tracking accuracy de
 
 The observed tracking error is a realistic control issue that reflects the physics-based simulation and controller tuning, not a failure of the communication or command interface.
 
-## Observations and learning outcomes (documentation updates)
+### Phase 4: Custom Jacobian-Based End-Effector Controller (Own Controller)
 
-- Joint Control Modes: The behavior of `setJointTargetPosition()` depends on the joint's control mode. Position control mode with appropriate PID tuning yields better tracking than velocity or torque control modes.
+File: `phase4_jacobian_controller.py`
 
-- PID Tuning: Tracking performance is sensitive to proportional, integral, and derivative gains. Default gains in CoppeliaSim may not be optimal for all trajectories.
+Description:  
+Phase 4 implements a fully custom kinematic controller written in Python, where joint updates are computed explicitly rather than relying on CoppeliaSim's internal inverse kinematics or motion planning.
+
+The controller operates in Cartesian (task) space and uses the robot's Jacobian to map small desired end-effector motions to joint-space updates. A numerical Jacobian is computed online using finite differences, and joint updates are calculated using a damped least-squares formulation to improve numerical stability near singular configurations.
+
+Implementation details:
+- End-effector position control in the x–y plane
+- Numerical Jacobian computation via finite differences
+- Damped least-squares pseudo-inverse for robustness
+- Joint updates applied directly using sim.setJointPosition
+- External control loop executed in Python using simulation-time stepping
+
+Design rationale:
+The default Franka Panda model includes internal Lua control scripts that may override joint target commands. To ensure full ownership of the control logic, these scripts were disabled and all control computations were implemented externally in Python.
+
+Outcome:
+The controller successfully executes stable Cartesian trajectories over a fixed simulation-time duration (~8 seconds), with bounded joint updates and smooth end-effector motion.
+
+## Observations and learning outcomes (documentation updates last 18/01)
+
+- Joint Control Modes (Phases 2–3): The behavior of `setJointTargetPosition()` depends on the joint's control mode. Position control with appropriate PID tuning yields better tracking than velocity or torque control when using CoppeliaSim's internal joint controllers.
+
+- PID Tuning (Phases 2–3): Tracking performance is sensitive to proportional, integral, and derivative gains when using built-in joint controllers. In Phase 4, PID control is bypassed in favour of direct kinematic joint updates.
+
+- Kinematic Control (Phase 4): In the custom Jacobian-based controller, joint motor control modes and PID gains are bypassed entirely. Joint updates are computed explicitly in Python using a numerical Jacobian and damped least-squares formulation and applied directly via `sim.setJointPosition()`.
 
 - Control Loop Frequency: Running the control loop at 20 Hz provides reasonable performance for this application, but higher frequencies may improve tracking for faster trajectories.
 
@@ -98,6 +124,12 @@ The observed tracking error is a realistic control issue that reflects the physi
 
 - Error Analysis: Implement more detailed error metrics like RMS error, maximum error and  steady-state error and visualize tracking performance over time.
 
+- Extension to 6D task-space control including end-effector orientation
+
+- Replacement of numerical Jacobian with an analytical Jacobian model
+
+- Transition from kinematic joint updates to dynamic (torque-based) control
+
 ## Requirements
 
 - CoppeliaSim 4.10 (or compatible version) installed on macOS
@@ -114,9 +146,10 @@ Each phase script can be run independently:
 python3 phase1_connect.py
 python3 phase2_move_joint.py
 python3 phase3_sine_joint.py
+python3 phase4_jacobian_controller.py
 ```
 
-Ensure CoppeliaSim is running with a scene containing the Franka Panda robot, and that the ZMQ Remote API server is enabled on the default port (23000).
+Ensure CoppeliaSim is running with a scene containing the Franka Panda robot and that the ZMQ Remote API server is enabled on the default port (23000).
 
 ## Notes
 
@@ -125,4 +158,4 @@ Ensure CoppeliaSim is running with a scene containing the Franka Panda robot, an
 - The tracking performance observed in Phase 3 is expected behavior and reflects the physics-based simulation and controller configuration, not a bug in the code.
 
 
-By Nagwa Houmid El Amrani
+By Nagwa Houmid 

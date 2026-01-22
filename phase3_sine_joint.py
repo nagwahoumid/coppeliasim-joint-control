@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Phase 3: Control a joint with a sine wave trajectory in CoppeliaSim using ZMQ Remote API.
-Commands panda_joint1 to follow q_des = q0 + 0.3 * sin(2*pi*0.2*t) for 8 seconds.
+Commands panda_joint1 to follow q_des = q0 + A * sin(2*pi*f*t) for 8 seconds.
 """
 
 import sys
@@ -160,6 +160,16 @@ def find_joint_handle_by_object_name(sim, wanted_name: str):
 
 
 def main() -> None:
+    # --- user-tweakable settings ---
+    JOINT_PATHS_TO_TRY = [
+        "/Franka/panda_joint1",  # common Franka path
+        "/panda_joint1",         # fallback if joint is at scene root
+    ]
+    USE_STEPPING = True          # lock control loop to simulation steps
+    DT = 0.05                    # 20 Hz
+    A = 0.3                      # radians
+    F = 0.2                      # Hz
+
     # IMPORTANT:
     # - In CoppeliaSim: Modules -> Connectivity -> ZMQ remote API server (running)
     # - Default port is usually 23000
@@ -189,29 +199,50 @@ def main() -> None:
     try:
         client = RemoteAPIClient(host="localhost", port=23000)
         sim = client.getObject("sim")
+        if USE_STEPPING:
+            client.setStepping(True)
         print("Connected to CoppeliaSim (Phase 3)")
     except Exception as e:
         print(f"[ERROR] Failed to connect to CoppeliaSim: {e}")
         raise
 
     # Find joint handle
-    print("\n[STEP 2] Searching for joint 'panda_joint1'...")
-    wanted_name = "panda_joint1"
-    joint_handle = find_joint_handle_by_object_name(sim, wanted_name)
-    
+    print("\n[STEP 2] Finding joint handle...")
+
+    joint_handle = None
+
+    # 1) Try absolute paths first (avoids name duplicates like panda_joint1#0)
+    for p in JOINT_PATHS_TO_TRY:
+        try:
+            joint_handle = sim.getObject(p)
+            if joint_handle is not None:
+                print(f"Found joint via path {p}: handle={joint_handle}")
+                break
+        except Exception:
+            pass
+
+    # 2) Fallback: search by object name
     if joint_handle is None:
-        print(f"[ERROR] Could not find joint '{wanted_name}'")
+        wanted_name = "panda_joint1"
+        print(f"Path lookup failed. Falling back to name search for '{wanted_name}'...")
+        joint_handle = find_joint_handle_by_object_name(sim, wanted_name)
+
+    if joint_handle is None:
+        print("[ERROR] Could not find the joint handle.")
         print("\nAvailable joints in scene:")
         try:
             joints = sim.getObjectsInTree(sim.handle_scene, sim.object_joint_type, 0)
             for h in joints:
                 name = sim.getObjectName(h)
-                print(f"  - {name}")
+                print(f"  - {name} (handle={h})")
         except Exception as e:
             print(f"[WARN] Could not list joints: {e}")
         sys.exit(1)
-    
-    print(f"Found joint handle: {joint_handle}")
+
+    try:
+        print("Resolved joint name:", sim.getObjectName(joint_handle))
+    except Exception:
+        pass
 
     # Read initial joint position
     print("\n[STEP 3] Reading initial joint position...")
@@ -233,58 +264,53 @@ def main() -> None:
 
     # Track errors for final verdict
     errors = []
-    last_check_time = 0.0
-    loop_start_time = None
 
     try:
-        # Run loop for 8 seconds of simulation time
         print("\n[STEP 5] Running sine wave control loop for 8 seconds of simulation time...")
         print("[CHECK] Format: t=..., q_des=..., q_act=..., err=...")
-        
-        while True:
-            # Get current simulation time
+
+        last_check_time = -1.0
+        loop_start_time = sim.getSimulationTime()
+
+        n_steps = int(8.0 / DT)
+
+        for _ in range(n_steps):
             t_sim = sim.getSimulationTime()
-            
-            # Initialise loop start time on first iteration
-            if loop_start_time is None:
-                loop_start_time = t_sim
-            
-            # Elapsed time since loop start
             t = t_sim - loop_start_time
-            
-            # Check if we've reached 8 seconds
-            if t >= 8.0:
-                break
-            
-            # Compute desired position: q_des = q0 + 0.3 * sin(2*pi*0.2*t)
-            q_des = q0 + 0.1 * math.sin(2 * math.pi * 0.05 * t)
-            
-            # Set joint target position
+
+            q_des = q0 + A * math.sin(2 * math.pi * F * t)
+
             try:
-                sim.setJointTargetPosition(joint_handle, q_des)
+                sim.setJointPosition(joint_handle, q_des)
             except Exception as e:
                 print(f"[WARN] Failed to set joint target position: {e}")
-            
-            # Read actual position and compute error
+
             try:
                 q_act = sim.getJointPosition(joint_handle)
                 err = q_act - q_des
                 errors.append(abs(err))
-                
-                # Print check every 0.5 seconds
-                if t - last_check_time >= 0.5:
+
+                if last_check_time < 0 or (t - last_check_time) >= 0.5:
                     print(f"[CHECK] t={t:.3f}, q_des={q_des:.6f}, q_act={q_act:.6f}, err={err:.6f}")
                     last_check_time = t
             except Exception as e:
                 print(f"[WARN] Could not read joint position: {e}")
-            
-            # Sleep for ~20 Hz control rate
-            time.sleep(0.05)
+
+            if USE_STEPPING:
+                client.step()
+            else:
+                time.sleep(DT)
 
     finally:
         # Stop simulation safely
         print("\n[STEP 6] Stopping simulation...")
         try:
+            if USE_STEPPING:
+                for _ in range(5):
+                    try:
+                        client.step()
+                    except Exception:
+                        break
             sim.stopSimulation()
             print("Simulation stopped.")
         except Exception as e:
