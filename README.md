@@ -2,7 +2,7 @@
 
 This repository presents a set of incremental experiments implementing a custom joint-space kinematic controller for a Franka Emika Panda robot in CoppeliaSim, using the ZMQ Remote API and Python.
 
-The project aims to control joint movements from outside the simulator, watch how the robot moves in a physics-based simulation, and study how well the controller tracks the desired paths and where it falls short. Instead of using built-in motion planners or inverse kinematics solvers, all control logic is written in Python and runs outside the simulator.
+The personal project aims to control joint movements from outside the simulator, watch how the robot moves in a physics-based simulation, and study how well the controller tracks the desired paths and where it falls short. Instead of using built-in motion planners or inverse kinematics solvers, all control logic is written in Python and runs outside the simulator.
 
 ## Overview
 
@@ -123,3 +123,6 @@ Ensure CoppeliaSim is running with a scene containing the Franka Panda robot, an
 - The scripts are designed for macOS. For Linux or Windows, update the `COPPELIA_APP_CANDIDATES` paths in each script.
 - All scripts include error handling and will print helpful messages if the simulator is not running or if required objects are not found.
 - The tracking performance observed in Phase 3 is expected behavior and reflects the physics-based simulation and controller configuration, not a bug in the code.
+
+
+By Nagwa Houmid El Amrani

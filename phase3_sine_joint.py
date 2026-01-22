@@ -20,7 +20,7 @@ from pathlib import Path
 #   - zmqRemoteApi/   (package)
 #   - src/            (package)
 # Some builds also ship a minimal `Contents/Resources/python` folder WITHOUT zmqRemoteApi.
-# So we search multiple candidate folders inside the .app.
+# so i search multiple candidate folders inside the .app.
 COPPELIA_APP_CANDIDATES = [
     # Common macOS install locations / app names:
     "/Applications/coppeliaSim.app",
@@ -47,9 +47,9 @@ def find_coppelia_python_folder() -> str:
     """Return an app-bundled folder we can add to sys.path so `import zmqRemoteApi` works."""
 
     def is_valid_zmq_client(py_path: Path) -> bool:
-        # Accept either:
+        # Accept either
         #   py_path/zmqRemoteApi + py_path/src
-        # or:
+        # or
         #   py_path/zmqRemoteApi/src  (src nested)
         if (py_path / "zmqRemoteApi").is_dir():
             if (py_path / "src").is_dir():
@@ -245,7 +245,7 @@ def main() -> None:
             # Get current simulation time
             t_sim = sim.getSimulationTime()
             
-            # Initialize loop start time on first iteration
+            # Initialise loop start time on first iteration
             if loop_start_time is None:
                 loop_start_time = t_sim
             
@@ -257,7 +257,7 @@ def main() -> None:
                 break
             
             # Compute desired position: q_des = q0 + 0.3 * sin(2*pi*0.2*t)
-            q_des = q0 + 0.3 * math.sin(2 * math.pi * 0.2 * t)
+            q_des = q0 + 0.1 * math.sin(2 * math.pi * 0.05 * t)
             
             # Set joint target position
             try:
