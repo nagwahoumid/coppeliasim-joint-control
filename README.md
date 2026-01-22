@@ -94,7 +94,7 @@ The default Franka Panda model includes internal Lua control scripts that may ov
 Outcome:
 The controller successfully executes stable Cartesian trajectories over a fixed simulation-time duration (around 8 seconds) with bounded joint updates and smooth end-effector motion.
 
-![phase4](images/phase4.png)
+![phase4](images/phase44.png)
 
 ## Observations and learning outcomes (documentation updates last 18/01/2025)
 
